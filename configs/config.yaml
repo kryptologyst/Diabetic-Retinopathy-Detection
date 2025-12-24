@@ -1,0 +1,67 @@
+# Configuration for Diabetic Retinopathy Detection
+
+# Data configuration
+data:
+  input_size: [224, 224]
+  channels: 3
+  num_classes: 2
+  class_names: ["No DR", "DR"]
+  synthetic_dataset_size: 1000
+  test_split: 0.2
+  val_split: 0.1
+
+# Model configuration
+model:
+  name: "efficientnet_b0"  # Options: resnet18, efficientnet_b0, vit_base_patch16_224
+  pretrained: true
+  dropout: 0.2
+  num_classes: 2
+
+# Training configuration
+training:
+  batch_size: 32
+  num_epochs: 50
+  learning_rate: 0.001
+  weight_decay: 1e-4
+  scheduler: "cosine"  # Options: cosine, step, plateau
+  patience: 10
+  gradient_clip: 1.0
+
+# Loss configuration
+loss:
+  name: "focal"  # Options: cross_entropy, focal, focal_alpha
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  class_weights: [1.0, 2.0]  # Higher weight for DR class
+
+# Augmentation configuration
+augmentation:
+  horizontal_flip: 0.5
+  rotation: 15
+  brightness_contrast: 0.2
+  hue_saturation: 0.1
+  elastic_transform: true
+  gaussian_noise: 0.1
+
+# Evaluation configuration
+evaluation:
+  metrics: ["accuracy", "auroc", "auprc", "sensitivity", "specificity", "ppv", "npv"]
+  calibration_bins: 10
+  threshold_optimization: true
+
+# Device configuration
+device:
+  auto_detect: true
+  fallback_order: ["cuda", "mps", "cpu"]
+  mixed_precision: true
+
+# Logging configuration
+logging:
+  level: "INFO"
+  log_dir: "logs"
+  save_predictions: true
+  save_attention_maps: true
+
+# Reproducibility
+seed: 42
+deterministic: true

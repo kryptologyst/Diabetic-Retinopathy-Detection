@@ -1,0 +1,125 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install black ruff pytest
+    
+    - name: Run black
+      run: black --check src/ scripts/ demo/ tests/
+    
+    - name: Run ruff
+      run: ruff check src/ scripts/ demo/ tests/
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.10, 3.11]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run tests
+      run: |
+        pytest tests/ -v --cov=src --cov-report=xml
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Test model creation
+      run: |
+        python -c "
+        from src.models.models import create_model
+        config = {
+            'model': {'name': 'resnet18', 'num_classes': 2, 'pretrained': False, 'dropout': 0.2},
+            'data': {'num_classes': 2}
+        }
+        model = create_model(config)
+        print('Model created successfully')
+        "
+    
+    - name: Test data loading
+      run: |
+        python -c "
+        from src.data.dataset import SyntheticRetinaDataset
+        dataset = SyntheticRetinaDataset(size=10)
+        print(f'Dataset created with {len(dataset)} samples')
+        "
+
+  demo-test:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Test Streamlit app import
+      run: |
+        python -c "
+        import streamlit as st
+        print('Streamlit import successful')
+        "
+    
+    - name: Test demo app syntax
+      run: |
+        python -m py_compile demo/app.py
+        print('Demo app syntax check passed')
